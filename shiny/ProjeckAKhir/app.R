@@ -14,6 +14,8 @@ library(dplyr)
 library(ggplot2)
 library(plotly)
 library(RColorBrewer)
+library(plotly)
+library(wordcloud)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -79,12 +81,40 @@ ui <- fluidPage(
                 )
             )
             
-        )  
+        ),  
+        tabPanel(
+            "Sentiment",
+            sidebarLayout(
+                sidebarPanel(
+                    selectInput(inputId = "sentiment","Pilih Sentiment",
+                                c("positive","negative", "anger","anticipation",
+                                "disgust","fear","joy","sadness","surprise","trust"),
+                                selected = "positive")
+                    ),
+                mainPanel(
+                    plotlyOutput(outputId = "aq_plot")
+                )
+            )
+        ),
+        tabPanel(
+            "Sentiment_Tags",
+            sidebarLayout(
+                sidebarPanel(
+                    selectInput(inputId = "sentiment_tags","Pilih Sentiment",
+                                c("positive","negative", "anger","anticipation",
+                                     "disgust","fear","joy","sadness","surprise","trust"),
+                                selected = "positive")
+                ),
+                mainPanel(
+                    plotlyOutput(outputId = "aq2_plot")
+                )
+            )
         )
+    )
 )
 
 # Define server logic required to draw a histogram
-server <- function(input, output) {
+server <- function(input, output, session) {
 
     output$geom_col_sent <- renderPlot({
          nrc_n%>%
@@ -133,6 +163,51 @@ server <- function(input, output) {
     output$cloud_word_tags <- renderPlot({
         wordcloud(cloudtext$tags,cloudtext$n, random.order = FALSE, rot.per = 0.25,
                   colors = brewer.pal(8,"Dark2"))
+    })
+    
+    aq_plot <- reactive({
+        
+        source_nrc %>%
+            ggplot(aes_string(x="source", y=input$sentiment, fill = "source")) +
+            geom_segment(aes_string(x="source", xend="source", y=0, yend=input$sentiment)) +
+            geom_point(color="blue", size=4, alpha=0.6, show.legend = FALSE) +
+            coord_flip() +
+            labs(
+                x = "Sentiment"
+            ) +
+            theme_light() +
+            theme(panel.grid.major.y = element_blank(),
+                  panel.border = element_blank(),
+                  axis.ticks.y = element_blank())
+    })
+    
+    output$aq_plot <- renderPlotly({
+        ggplotly(aq_plot())
+    })
+    
+    aq2_plot <- reactive({
+        
+        tags_nrc %>%
+            arrange(desc(!!sym(input$sentiment_tags))) %>%
+            head(10) %>%
+            ggplot(aes(
+                x=(reorder(tags, !!sym(input$sentiment_tags))), 
+                y=!!sym(input$sentiment_tags), 
+                fill = "tags")) +
+            geom_segment(aes_string(x="tags", xend="tags", y=0, yend=input$sentiment_tags)) +
+            geom_point(color="blue", size=4, alpha=0.6, show.legend = FALSE) +
+            coord_flip() +
+            labs(
+                x = "Sentiment"
+            ) +
+            theme_light() +
+            theme(panel.grid.major.y = element_blank(),
+                  panel.border = element_blank(),
+                  axis.ticks.y = element_blank())
+    })
+    
+    output$aq2_plot <- renderPlotly({
+        ggplotly(aq2_plot())
     })
 }
 
