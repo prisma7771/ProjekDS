@@ -1,0 +1,198 @@
+---
+title: "ProjectDs"
+author: "Prisma"
+date: "12/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+Library & Token API
+```{r}
+library(rtweet)
+library(tidytext)
+library(tidyverse)
+library(here)
+library(tidymodels)
+library(wordcloud)
+
+appname <- "ProjectDS_Akhir"
+key <- "WKEPcfVOPbcT4Fb6x0ms5iaoa"
+secret <- "0UiG6qnTeZGIeD6aSUSQnVmKvL60DJyiVSG7LSeIZZvfJlj1dd"
+access_token <- "2868819259-ssVSKS6GPnjS9FvjcsccQy5mbVpSiiJvAw7uYlQ"
+access_secret <- "Nb8qRhHXODJDdDWdTXnMW4bE7U78A63XWzdlqpF1QwEFh" 
+```
+
+Create token  authentication
+
+```{r}
+twitter_token <- create_token(
+  app = appname,
+  consumer_key = key,
+  consumer_secret = secret,
+  access_token = access_token,
+  access_secret = access_secret)
+```
+
+Buat ngambil tweet indo tags #Covid19
+Ga usah dipake kalo mau import file kemarin
+
+```{r}
+rstats_tweets <- search_tweets(q = "#Covid19",
+                               n = 999,
+                               type = "recent",
+                               lang = "id")
+```
+Dipake kalo mau nyimpan tweetnya ke bentuk csv
+
+```{r}
+write_as_csv(rstats_tweets, here("covi19_tweet.csv"), prepend_ids = TRUE, na = "",fileEncoding = "UTF-8")
+```
+
+Yang penting kayaknya cuma teks, source sma hashtagsga sih?
+
+```{r}
+data <- covi19_tweet %>%
+  select(text, source,hashtags)
+```
+Data Cleaning
+
+```{r}
+data <- data %>% mutate(hashtags = sapply(hashtags, toString))
+data <- data[!(data$hashtags == 'NA'),]
+data$text <- gsub("https\\S*","", data$text)
+data$text <- gsub("@\\S*","",data$text)
+data$text <- gsub("amp*","",data$text)
+data$text <- gsub("[\r\n]","",data$text)
+data$text <- gsub("[[:punct:]]","",data$text)
+```
+
+Ambil Tiap Kata
+
+```{r}
+data_word <- data%>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) 
+```
+Ambil tiap tags
+```{r}
+data_tags <- data%>%
+  unnest_tokens(word, hashtags) %>%
+  anti_join(stop_words) %>%
+  rename(tags = word)
+```
+Ambil Tiap Tags dan Kata
+```{r}
+data_tidy <- data_tags%>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>%
+  select(tags,word) %>%
+  group_by(word) %>%
+  count(tags) %>%
+  arrange(desc(n)) 
+data_tidy
+```
+Ngehitung jumlah masing-masingtags
+```{r}
+tagstidy <- data_tidy %>%
+  select(tags) %>%
+  group_by(tags) %>%
+  count(tags) 
+
+tagstidy
+```
+Menampilkan data tags terbanyak
+```{r}
+tagstidy %>%
+  arrange(desc(n)) %>%
+  head(10) %>%
+  ggplot(aes(reorder(tags,n), y=n, fill = tags)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  labs(
+    x = "Tags"
+  )
+```
+versi wordcloud
+```{r}
+cloudtext <- tagstidy %>%
+  arrange(desc(n)) %>%
+  head(30)
+
+wordcloud(cloudtext$tags,cloudtext$n, random.order = FALSE, rot.per = 0.25,
+          colors = brewer.pal(8,"Dark2"))
+```
+
+Menghitung jumlah source dan menggaungkan source <20 ke baris bernama  dll
+```{r}
+data_source <- data %>% 
+  group_by(source) %>%
+  select(source) %>%
+  count(source)
+
+data_source
+
+source_below_20 <- data_source %>%
+  filter(n<20) 
+
+source_below_20 <- sum(source_below_20$n)
+
+tidy_source <- data_source %>%
+  ungroup() %>%
+  add_row(source = "dll", n = source_below_20) %>%
+  filter(n>20) %>%
+  arrange(desc(n))
+
+tidy_source
+```
+```{r}
+tidy_source %>%
+  ggplot(aes(reorder(source,n), y=n, fill = source, label = n)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  labs(
+    x = "Tags"
+  ) + 
+  geom_text(position = position_dodge(1), hjust = 0, vjust = 0.3)
+```
+Menghitung nilai sentiment
+
+```{r}
+nrc_n <- data_word %>% 
+  select(word) %>%
+  inner_join(get_sentiments("nrc")) %>%
+  count(sentiment, sort = TRUE)
+nrc_n
+```
+
+```{r}
+nrc_n %>%
+  ggplot(aes(x=n, y=sentiment, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  labs(
+    x = "Sentiment"
+  )
+```
+
+Melihat Sentiment dari  tiap2 source
+```{r}
+source_nrc <- data_tidy %>% 
+  inner_join(get_sentiments("nrc")) %>%
+  group_by(source) %>%
+  count(sentiment, sort = TRUE) %>%
+  spread(sentiment, n, fill = 0) %>%
+  ungroup()
+source_nrc
+```
+Menghitung jumlah kata yang sering muncul
+```{r}
+word_n <- data_word %>%
+  count(word, sort = TRUE)
+
+word_n
+```
