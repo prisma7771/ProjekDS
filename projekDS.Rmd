@@ -44,8 +44,8 @@ twitter_token <- create_token(
   access_secret = access_secret)
 ```
 
-Buat ngambil tweet indo tags #Covid19
-Ga usah dipake kalo mau import file kemarin
+Untuk mengambil tweet indo tags dengan tags #Covid19
+Tidak perlu digunakan juga akan menggunakan tweet yang sudah diubah ke format csv. 
 
 ```{r}
 rstats_tweets <- search_tweets(q = "#Covid19",
@@ -53,13 +53,18 @@ rstats_tweets <- search_tweets(q = "#Covid19",
                                type = "recent",
                                lang = "id")
 ```
-Dipake kalo mau nyimpan tweetnya ke bentuk csv
+Digunakan untuk menyimpan tweetnya ke bentuk csv. Gunakan jika sudah yakin dengan tweet yang akan digunakan dan ubah ke csv. Jika sudah ada csv, maka langkah sebelumnya tidak perlu dilakukan dan menggunakan import dari csv hasil langkah ini.
 
 ```{r}
 write_as_csv(rstats_tweets, here("covi19_tweet.csv"), prepend_ids = TRUE, na = "",fileEncoding = "UTF-8")
 ```
 
-Yang penting kayaknya cuma teks, source sma hashtagsga sih?
+```{r}
+covi19_tweet <- vroom(here("covi19_tweet.csv"))
+```
+
+
+Mengambil kolom text, source, dan hashtags
 
 ```{r}
 data <- covi19_tweet %>%
@@ -77,21 +82,21 @@ data$text <- gsub("[\r\n]","",data$text)
 data$text <- gsub("[[:punct:]]","",data$text)
 ```
 
-Ambil Tiap Kata
+Ambil Tiap Kata dalam Text
 
 ```{r}
 data_word <- data%>%
   unnest_tokens(word, text) %>%
   anti_join(stop_words) 
 ```
-Ambil tiap tags
+Ambil tiap tags dalam hashtags
 ```{r}
 data_tags <- data%>%
   unnest_tokens(word, hashtags) %>%
   anti_join(stop_words) %>%
   rename(tags = word)
 ```
-Ambil Tiap Tags dan Kata
+Ambil Tiap Tags dan Kata dari Hashtags dan Text
 ```{r}
 data_tidy <- data_tags%>%
   unnest_tokens(word, text) %>%
@@ -102,7 +107,7 @@ data_tidy <- data_tags%>%
   arrange(desc(n)) 
 data_tidy
 ```
-Ngehitung jumlah masing-masingtags
+Menghitung jumlah masing-masing tags
 ```{r}
 tagstidy <- data_tidy %>%
   select(tags) %>%
@@ -195,6 +200,7 @@ source_nrc <- data_word %>%
   ungroup()
 source_nrc
 ```
+Melihat Sentiment masing-masing tags
 ```{r}
 tags_nrc <- data_tidy %>% 
   inner_join(get_sentiments("nrc")) %>%
@@ -237,7 +243,7 @@ ui <- fluidPage(
     navbarPage(
         "ProjekAkhir",
         tabPanel(
-            "Home",
+            "Col_Chart",
             sidebarLayout(
                 sidebarPanel(
                     selectInput("plotdata", "Pilih Plot Berdasarkan: ", c("Sentiment","Source"))
