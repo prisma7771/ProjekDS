@@ -19,28 +19,28 @@ library(wordcloud)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-
+    
     # Application title
     titlePanel("Sentiment Analysis Covid-19 on Twitter"),
-
+    
     # Sidebar with a slider input for number of bins 
     navbarPage(
         "ProjekAkhir",
         tabPanel(
-            "Home",
+            "Col_Chart",
             sidebarLayout(
                 sidebarPanel(
                     selectInput("plotdata", "Pilih Plot Berdasarkan: ", c("Sentiment","Source"))
-                    ),
+                ),
                 mainPanel(
                     conditionalPanel(
                         condition = "input.plotdata == 'Sentiment'",  
                         plotOutput("geom_col_sent")
-                        ),
+                    ),
                     conditionalPanel(
                         condition = "input.plotdata == 'Source'",  
                         plotOutput("geom_col_source")
-                        )
+                    )
                 )
             )
         ),
@@ -62,7 +62,7 @@ ui <- fluidPage(
                 )
             )
             
-            ),
+        ),
         tabPanel(
             "CloudWord",
             sidebarLayout(
@@ -88,9 +88,9 @@ ui <- fluidPage(
                 sidebarPanel(
                     selectInput(inputId = "sentiment","Pilih Sentiment",
                                 c("positive","negative", "anger","anticipation",
-                                "disgust","fear","joy","sadness","surprise","trust"),
+                                  "disgust","fear","joy","sadness","surprise","trust"),
                                 selected = "positive")
-                    ),
+                ),
                 mainPanel(
                     plotlyOutput(outputId = "aq_plot")
                 )
@@ -102,7 +102,7 @@ ui <- fluidPage(
                 sidebarPanel(
                     selectInput(inputId = "sentiment_tags","Pilih Sentiment",
                                 c("positive","negative", "anger","anticipation",
-                                     "disgust","fear","joy","sadness","surprise","trust"),
+                                  "disgust","fear","joy","sadness","surprise","trust"),
                                 selected = "positive")
                 ),
                 mainPanel(
@@ -115,9 +115,9 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
-
+    
     output$geom_col_sent <- renderPlot({
-         nrc_n%>%
+        nrc_n%>%
             arrange(desc(n)) %>%
             ggplot(aes(reorder(sentiment,n), y=n, fill = sentiment, label = n)) +
             geom_col(show.legend = FALSE) +
@@ -127,7 +127,7 @@ server <- function(input, output, session) {
                 y = "count"
             ) +
             geom_text(position = position_dodge(1), hjust = 0, vjust = 0.3)
-            
+        
     })
     
     output$geom_col_source <- renderPlot({
@@ -159,7 +159,7 @@ server <- function(input, output, session) {
         wordcloud(word_n$word,word_n$n, min.freq = 50, random.order = FALSE, rot.per = 0.25,
                   colors = brewer.pal(8,"Dark2"))
     })
-
+    
     output$cloud_word_tags <- renderPlot({
         wordcloud(cloudtext$tags,cloudtext$n, random.order = FALSE, rot.per = 0.25,
                   colors = brewer.pal(8,"Dark2"))
@@ -212,4 +212,4 @@ server <- function(input, output, session) {
 }
 
 # Run the application 
-shinyApp(ui = ui, server = server)
+shinyApp(ui = ui, server = server, options = list(height = "500px"))

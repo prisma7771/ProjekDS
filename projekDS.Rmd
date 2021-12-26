@@ -61,6 +61,8 @@ write_as_csv(rstats_tweets, here("covi19_tweet.csv"), prepend_ids = TRUE, na = "
 
 ```{r}
 covi19_tweet <- vroom(here("covi19_tweet.csv"))
+covi19_tweet
+
 ```
 
 
